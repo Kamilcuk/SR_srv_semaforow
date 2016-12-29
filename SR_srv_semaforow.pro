@@ -3,12 +3,15 @@
 ######################################################################
 
 TEMPLATE = app
+CONFIG -= qt
 TARGET = SR_srv_semaforow
 INCLUDEPATH += .
-LIBS += -lboost_program_options -lcppnetlib-uri -lcppnetlib-server-parsers -lcppnetlib-client-connections -ljsoncpp
+LIBS += -lboost_program_options -lcppnetlib-uri -lcppnetlib-server-parsers -lcppnetlib-client-connections -ljsoncpp -lpthread
 # Input
 SOURCES += main.cpp \
-    client.cpp
+    client.cpp \
+    uuid.cpp
 
 HEADERS += \
-    client.hpp
+	client.hpp \
+    uuid.hpp

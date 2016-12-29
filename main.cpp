@@ -1,8 +1,6 @@
 #include <iostream>
-#include <json/json.h>
 #include <boost/program_options.hpp>
 #include "client.hpp"
-#include <boost/algorithm/string.hpp>
 
 using namespace std;
 
