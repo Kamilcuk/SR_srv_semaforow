@@ -1,7 +1,42 @@
 # SR_srv_semaforow
 Projekt na SR
 
+# how to
+
+## sync
+
+```
+git clone --recursive https://github.com/Kamilcuk/SR_srv_semaforow
+```
+
+## run in console
+
+```
+pushd SR-semaphore-server
+sudo systemctl start docker
+sudo docker build -t server-image -f Dockerfile.server .
+sudo docker run -it --rm --name sema-server server-image
+popd
+```
+
+## docker
+
+### server
+
+```
+docker pull kamilcuk/sr_srv_semaforow
+docker run -it -rm -name ksemaserver kamilcuk/sr_srv_semaforow server
+```
+
+### client
+
+```
+docker pull kamilcuk/sr_srv_semaforow
+docker run -it -rm -name ksemaserver kamilcuk/sr_srv_semaforow server
+```
+
 # Zadanie 3 
+
 ```
 Zaimplementować serwer semaforów udostępniający podstawowe operacje na semaforach (tworzenie, operacja p, operacja v, usuwanie) oraz API dostępu do usług serwera. API wykonać tak aby wykorzystując algorytm Chandy-Misra-Haasa [1] realizowały rozproszone wykrywanie blokad. Wykrycie blokady powinno skutkować zgłoszeniem wyjątku.
 Zasady implementacji i oceniania

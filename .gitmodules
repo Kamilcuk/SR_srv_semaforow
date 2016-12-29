@@ -1,0 +1,3 @@
+[submodule "SR-semaphore-server"]
+	path = SR-semaphore-server
+	url = https://github.com/m-kostrzewa/SR-semaphore-server
