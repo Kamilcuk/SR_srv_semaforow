@@ -1,6 +1,8 @@
 #include <iostream>
 #include <json/json.h>
 #include <boost/program_options.hpp>
+#include "client.hpp"
+#include <boost/algorithm/string.hpp>
 
 using namespace std;
 
@@ -16,9 +18,9 @@ bool process_command_line(int argc, char** argv,
 	{
 		po::options_description desc("Program Usage", 1024, 512);
 		desc.add_options()
-			("help",     "produce help message")
+			("help,h",     "produce help message")
 			("type,t",   po::value<std::string>(&type)->required(),      "type [client|server] mandatory")
-			("server,s", po::value<std::string>(&serverurl)->required(), "serverurl in format x.x.x.x:port")
+			("server,s", po::value<std::string>(&serverurl),			"serverurl in format [http://]x.x.x.x:port/v1")
 		;
 		po::variables_map vm;
 		po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -27,6 +29,22 @@ bool process_command_line(int argc, char** argv,
 			return false;
 		}
 		po::notify(vm);
+
+
+		if ( type == "client" ) {
+			is_server = 0;
+		} else {
+			is_server = 1;
+		}
+
+		if ( !is_server ) {
+			if (!vm.count("server")) {
+				std::cout << desc << "\n";
+				std::cout << "IF klient to wtedy trzeba podac server url." << std::endl;
+				return false;
+			}
+		}
+
 	}
 	catch(std::exception& e)
 	{
@@ -38,15 +56,10 @@ bool process_command_line(int argc, char** argv,
 		std::cerr << "Unknown error!" << "\n";
 		return false;
 	}
-
-	if ( type == "client" ) {
-		is_server = 0;
-	} else {
-		is_server = 1;
-	}
-
 	return true;
 }
+
+
 
 int main(int argc, char *argv[])
 {
@@ -57,9 +70,11 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	if ( is_server ) {
-		run_server(serverurl);
+		//Server server();
+		//server.run();
 	} else {
-		run_client(serverurl);
+		Client client(serverurl);
+		client.run();
 	}
 	cout << "Hello World!" << endl;
 	return 0;
