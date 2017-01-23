@@ -80,7 +80,7 @@ bool process_command_line(int argc, char** argv,struct config_s &config)
 static boost::shared_ptr<boost::asio::io_service> io_service { boost::make_shared<boost::asio::io_service>() };
 
 static void signalfunc(int signo) {
-	std::cerr << "Signal " << signo <<" couth! shutting down!" << std::endl;
+	std::cerr << "Signal " << signo <<" caught! shutting down!" << std::endl;
 	io_service->stop();
 }
 

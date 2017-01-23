@@ -3,7 +3,6 @@
 #include <iostream>
 #include <boost/network/protocol/http/client.hpp>
 #include "client.hpp"
-#include "uuid.hpp"
 
 #define DBG_CONN std::cout
 //#define DBG_CONN if (1) {} else std::cout
@@ -113,6 +112,9 @@ std::string Client::Send_LocksDump()
 
 void Client::run()
 {
+	while(1) {
+
+	}
 	std::cout << Send_MaintenanceHello("world") << std::endl;
 	std::string uuid = Send_LocksCreateSemaphore(1,0,2);
 	std::cout << uuid << std::endl;

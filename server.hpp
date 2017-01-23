@@ -3,16 +3,21 @@
 
 #include <boost/network/protocol/http/server.hpp>
 #include <json/json.h>
+#include <vector>
+#include "semaphore.hpp"
 
 struct Server;
 typedef boost::network::http::server<Server> myhttpserver;
-// typedef std::shared_ptr<boost::network::http::async_connection<boost::network::http::tags::http_server, Server> > httpserverresponse;
+//typedef std::shared_ptr<boost::network::http::async_connection<boost::network::http::tags::http_server, Server> > httpserverresponse;
 //typedef myhttpserver::request httpserverrequest;
 typedef boost::network::http::basic_request<boost::network::http::tags::http_server>  httpserverrequest;
 typedef boost::network::http::basic_response<boost::network::http::tags::http_server> httpserverresponse;
 
 struct Server
 {
+	/// uuids->Sempaphores
+	static std::map<std::string,Semaphore> sems;
+
 	Server();
 
 	void operator ()( httpserverrequest const &request,
@@ -20,6 +25,9 @@ struct Server
 	void log(const myhttpserver::string_type &info);
 
 	void operatorO_parseJson(httpserverresponse &res, Json::Value root);
+
+public:
+	void operatorO_parseJson_in(httpserverresponse &res, Json::Value root);
 };
 
 #endif // SERVER_HPP
