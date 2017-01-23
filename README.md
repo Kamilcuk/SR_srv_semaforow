@@ -9,30 +9,28 @@ Projekt na SR
 git clone --recursive https://github.com/Kamilcuk/SR_srv_semaforow
 ```
 
-## run in console
-
-```
-pushd SR-semaphore-server
-sudo systemctl start docker
-sudo docker build -t server-image -f Dockerfile.server .
-sudo docker run -it --rm --name sema-server server-image
-popd
-```
-
 ## docker
+
+Zbudowany na docker hub na https://hub.docker.com/r/kamilcuk/sr_srv_semaforow/  
 
 ### server
 
 ```
 docker pull kamilcuk/sr_srv_semaforow
-docker run -it -rm -name ksemaserver kamilcuk/sr_srv_semaforow server
+docker run -it -rm -name ksemaserver kamilcuk/sr_srv_semaforow --type server
 ```
 
 ### client
 
 ```
 docker pull kamilcuk/sr_srv_semaforow
-docker run -it -rm -name ksemaserver kamilcuk/sr_srv_semaforow server
+docker run -it -rm -name ksemaserver kamilcuk/sr_srv_semaforow --type client --serverurl 'http://123.123.123.123:8080/v1'
+```
+
+### help
+
+```
+docker run -it -rm -name ksemaserver kamilcuk/sr_srv_semaforow --help
 ```
 
 # Zadanie 3 
