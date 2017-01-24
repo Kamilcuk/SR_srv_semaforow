@@ -3,50 +3,71 @@
 #include <iostream>
 #include <boost/network/protocol/http/client.hpp>
 #include "client.hpp"
+#include "abstractserver.hpp"
+#include <cstdio>
+#include "unistd.h"
+#include <boost/bind.hpp>
+#include "helpers.hpp"
 
 #define DBG_CONN std::cout
 //#define DBG_CONN if (1) {} else std::cout
 
-Client::Client(std::string serverurl) :
+Client::Client(std::string serverurl, std::string clientip, unsigned int port) :
 	_serverurl(serverurl),
-	_owner("127.0.0.1:10000")
+	_owner(clientip+":"+std::to_string(port)),
+	_port(port),
+	_clientconsole(serverurl),
+	_clientserver(this),
+	_clientserverhttpserver(
+		myhttpserver::options(_clientserver).
+			address(clientip).port(std::to_string(_port))
+	)
 {
+	_clientserverthread = boost::thread(
+				boost::bind(&decltype(_clientserverhttpserver)::run,
+							&_clientserverhttpserver)
+	);
 }
 
-Json::Value Client::send(Json::Value msg)
+std::string Client::sendStrToServerStr(std::string serverurl, std::string bodymsg)
 {
 	using namespace boost::network;
 	using namespace boost::network::http;
-
-	static uint id = 1;
-
 	http::client client;
-
-	msg["id"] = id++;
-	Json::FastWriter writer;
-	std::string bodymsg = writer.write( msg );
-
-	client::request request(_serverurl);
-	DBG_CONN << "Conn: " << _serverurl << std::endl;
+	client::request request(serverurl);
+	//DBG_CONN << "Conn: " << serverurl << std::endl;
 	request << header("Content-Type", "application/json");
 	request << header("Content-Length", std::to_string( bodymsg.length() ));
 	request << header("Connection", "close");
 	request << body(bodymsg);
-	DBG_CONN << "Reqe: " << bodymsg;
+	//DBG_CONN << "Reqe: " << bodymsg;
 	client::response response = client.post(request);
+	return body(response);
+}
 
+Json::Value Client::sendStrToServer(std::string serverurl, std::string bodymsg)
+{
+	return to_json( Client::sendStrToServerStr(serverurl, bodymsg) );
+}
 
-	Json::Value ret;
-	Json::Reader reader;
-	std::string bodyresp = body(response);
-	bool parsingSuccessful = reader.parse( bodyresp.c_str(), ret );
-	if ( !parsingSuccessful ) {
-		DBG_CONN << "Resp: " << body(response);
-		throw std::runtime_error("Failed to parse" + reader.getFormattedErrorMessages());
+Json::Value Client::sendToServer(std::string serverurl, Json::Value msg)
+{
+	static uint id = 1;
+	msg["id"] = id++;
+	Json::FastWriter writer;
+	std::string bodymsg;
+	try {
+		bodymsg = writer.write( msg );
+	} catch(std::exception &e) {
+		std::cerr << __PRETTY_FUNCTION__ << e.what() << std::endl;
+		return Json::Value();
 	}
-	DBG_CONN << "JRes: " << writer.write( ret );
+	return Client::sendStrToServer(serverurl, bodymsg);
+}
 
-	return ret;
+
+Json::Value Client::send(Json::Value msg) {
+	return sendToServer(_serverurl, msg);
 }
 
 std::string Client::Send_MaintenanceHello(std::string name)
@@ -112,16 +133,16 @@ std::string Client::Send_LocksDump()
 
 void Client::run()
 {
-	while(1) {
-
+	while(!_stop) {
+		_clientconsole.run();
 	}
-	std::cout << Send_MaintenanceHello("world") << std::endl;
-	std::string uuid = Send_LocksCreateSemaphore(1,0,2);
-	std::cout << uuid << std::endl;
-	std::cout << Send_MaintenanceHello("world") << std::endl;
-	std::cout << Send_LocksIncrementSemaphore(uuid);
-	std::cout << Send_LocksIncrementSemaphore(uuid);
-	std::cout << Send_LocksIncrementSemaphore(uuid);
-	std::cout << Send_LocksIncrementSemaphore(uuid);
-	std::cout << Send_LocksDeleteSemaphore(uuid) << std::endl;
+	_clientserverhttpserver.stop();
+	_clientserverthread.join();
+}
+
+void Client::stop()
+{
+	DEBUGMSG(" ");
+	Servicable::stop();
+	_clientconsole.stop();
 }

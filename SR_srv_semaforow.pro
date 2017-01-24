@@ -8,9 +8,20 @@ TARGET = SR_srv_semaforow
 INCLUDEPATH += .
 LIBS += -lboost_program_options -lboost_system -lboost_thread -lcppnetlib-uri -lcppnetlib-server-parsers -lcppnetlib-client-connections -ljsoncpp -lpthread
 # Input
-HEADERS += client.hpp helpers.hpp server.hpp \
-    semaphore.hpp
-SOURCES += client.cpp main.cpp server.cpp \
-    server_logic.cpp \
+HEADERS += client.hpp helpers.hpp \
+    semaphore.hpp \
+    abstractserver.hpp \
+    server.hpp \
+    clientserver.hpp \
+    clientconsole.hpp \
+    servicable.hpp \
+    serverserver.hpp
+SOURCES += client.cpp main.cpp \
     helpers.cpp \
-    semaphore.cpp
+    semaphore.cpp \
+    abstractserver.cpp \
+    server.cpp \
+    clientserver.cpp \
+    clientconsole.cpp \
+    servicable.cpp \
+    serverserver.cpp

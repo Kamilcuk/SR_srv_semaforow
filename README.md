@@ -17,14 +17,14 @@ Zbudowany na docker hub na https://hub.docker.com/r/kamilcuk/sr_srv_semaforow/
 
 ```
 docker pull kamilcuk/sr_srv_semaforow
-docker run -it -rm -name ksemaserver kamilcuk/sr_srv_semaforow --type server
+docker run -it -rm -name ksemaserver kamilcuk/sr_srv_semaforow --type server --listenport 7890 --listenip 127.0.0.1
 ```
 
 ### client
 
 ```
 docker pull kamilcuk/sr_srv_semaforow
-docker run -it -rm -name ksemaserver kamilcuk/sr_srv_semaforow --type client --serverurl 'http://123.123.123.123:8080/v1'
+docker run -it -rm -name ksemaserver kamilcuk/sr_srv_semaforow --type client --serverurl '127.0.0.1:7890' --listenport 7891 --listenip 127.0.0.1
 ```
 
 ### help

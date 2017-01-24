@@ -1,33 +1,32 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include <boost/network/protocol/http/server.hpp>
-#include <json/json.h>
-#include <vector>
-#include "semaphore.hpp"
+#include "servicable.hpp"
+#include <string>
+#include "serverserver.hpp"
 
-struct Server;
-typedef boost::network::http::server<Server> myhttpserver;
-//typedef std::shared_ptr<boost::network::http::async_connection<boost::network::http::tags::http_server, Server> > httpserverresponse;
-//typedef myhttpserver::request httpserverrequest;
-typedef boost::network::http::basic_request<boost::network::http::tags::http_server>  httpserverrequest;
-typedef boost::network::http::basic_response<boost::network::http::tags::http_server> httpserverresponse;
-
-struct Server
+class Server : public Servicable
 {
+	std::string _serverurl;
+	int _port;
+	ServerServer _serverserver;
+	myhttpserver _serverserverhttpserver;
+	boost::thread _serverserverthread;
+
+
 	/// uuids->Sempaphores
-	static std::map<std::string,Semaphore> sems;
-
-	Server();
-
-	void operator ()( httpserverrequest const &request,
-					 httpserverresponse &response);
-	void log(const myhttpserver::string_type &info);
-
-	void operatorO_parseJson(httpserverresponse &res, Json::Value root);
+	std::map<std::string,Semaphore> sems;
 
 public:
+	Server(std::string serverurl, int port);
+	void run();
+	void stop();
+	static bool CheckClient(std::string c,std::string &errorstr);
+
 	void operatorO_parseJson_in(httpserverresponse &res, Json::Value root);
+	std::vector<std::string> getAllOwners();
+	void HeartbeatScan();
+	void DisconnectClient(std::string o);
 };
 
 #endif // SERVER_HPP

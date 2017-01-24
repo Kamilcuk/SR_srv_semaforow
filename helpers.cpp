@@ -1,5 +1,5 @@
 
-#include "server.hpp"
+#include "abstractserver.hpp"
 #include "helpers.hpp"
 
 #include <boost/uuid/uuid.hpp>            // uuid class
@@ -8,6 +8,17 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+#include <json/json.h>
+
+std::string to_string(Json::Value root) {
+	Json::FastWriter writer;
+	return writer.write( root );
+}
+
+void fillrespOKJson(httpserverresponse &res, Json::Value root)
+{
+	fillrespOK(res, to_string(root));
+}
 
 void fillrespERR( httpserverresponse &res, std::string msg,
 			  httpserverresponse::status_type type)
@@ -39,4 +50,32 @@ boost::uuids::uuid getUuid()
 boost::uuids::uuid getUuid(std::__cxx11::string u)
 {
 	return boost::uuids::string_generator()(u);
+}
+
+
+
+Json::Value fillParams(Json::Value root) {
+	return root;
+}
+
+void responseWithJson(httpserverresponse &res, std::__cxx11::string method) {
+	Json::Value root;
+	root["method"] = method;
+	fillrespOK(res, to_string(root));
+}
+
+void responseWithJsonTo(httpserverresponse &res, Json::Value realroot)
+{
+	responseWithJson(res, realroot["method"].asString());
+}
+
+Json::Value to_json(std::__cxx11::string str)
+{
+	Json::Value ret;
+	Json::Reader reader;
+	bool parsingSuccessful = reader.parse( str, ret );
+	if ( !parsingSuccessful ) {
+		throw std::runtime_error("to_json error - failed to parse" + reader.getFormattedErrorMessages());
+	}
+	return ret;
 }
