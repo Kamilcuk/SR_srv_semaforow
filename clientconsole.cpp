@@ -3,9 +3,15 @@
 #include <regex>
 #include <unistd.h>
 #include "client.hpp"
+#include "helpers.hpp"
+#include <string>       // std::string
+#include <iostream>     // std::cout
+#include <sstream>      // std::stringstream, std::stringbuf
 
-ClientConsole::ClientConsole(std::string serverurl) :
-	_serverurl(serverurl)
+
+ClientConsole::ClientConsole(Client *client, std::string serverurl) :
+	_serverurl(serverurl),
+	_client(client)
 {
 
 }
@@ -19,8 +25,57 @@ void ClientConsole::sendline(std::string msg) {
 	}
 }
 
-void ClientConsole::run()
+Json::Value ClientConsole::sendlineJsonJson(Json::Value msg)
 {
+	Json::Value ret;
+	std::cout << "Sending:   " << to_string(msg) << std::endl;
+	try {
+		ret = Client::sendToServer(_serverurl, msg);
+		std::cout << "Received:  " << to_string(ret) << std::endl;
+	} catch(std::exception &e) {
+		std::cout << "ERROR sendign str to serveR: " << e.what() << std::endl;
+	}
+	return ret;
+}
+
+struct SemaphoreInfo
+{
+	static int number;
+	int state = 0;
+	std::string uuid;
+	SemaphoreInfo(std::string _uuid) : uuid(_uuid) {
+		number++;
+	}
+	void increment() { state++; }
+	void decrement() { state--; }
+};
+int SemaphoreInfo::number = 1;
+
+/// uuid -> SemaphoreInfo
+std::map<std::string, SemaphoreInfo> sems;
+
+void usage()
+{
+	std::cout << "UNKNOWN LINE - omiting..." << std::endl
+	 << "Supported commands:" << std::endl
+	 << "{\"<some string> - send this string to server" << std::endl
+	 << "send <some string>" << std::endl
+	 << "sendraw <some data> " << std::endl
+	 << "printinfo" << std::endl
+	 << "Send_LocksCreateSemaphore <CurrentVal> <MinVal> <MaxVal>" << std::endl
+	 << "Send_MaintenanceHello <name>" << std::endl
+	 << "Send_LocksDeleteSemaphore <uuid>" << std::endl
+	 << "Send_LocksDecrementSemaphore <uuid>" << std::endl
+	 << "Send_LocksIncrementSemaphore <uuid>" << std::endl
+	 << "Send_LocksDump" << std::endl
+	 << "quit" << std::endl;
+}
+
+void ClientConsole::one_run()
+{
+	std::string method;
+	std::string result;
+
 	std::cout << "> ";
 	std::string line;
 	std::cin.clear();
@@ -37,13 +92,93 @@ void ClientConsole::run()
 	if ( std::regex_match(line, std::regex("quit")) ) {
 		this->stop();
 		raise(SIGINT); // yay!
+#define CHECK(x) ({ method = (x); std::regex_match(line, std::regex(method+".*")); })
+	} else
+	if ( CHECK("printinfo") ) {
+		std::cout << "Printing information about owned sems \n";
+		std::cout << "Initial sem state was 0 \n";
+		 for(auto &s : sems ) {
+			 std::cout
+					<< " s.f.uuid: " << s.first
+					<< " s.s.uuid: " << s.second.uuid
+					<< " s.number: " << s.second.number
+					<< " s.state:  " << s.second.state
+					<< std::endl;
+		 }
+	} else
+	if ( CHECK("Send_LocksCreateSemaphore") ) {
+		std::istringstream iss(line); iss >> method;
+		int cur, min, max; iss >> cur; iss >> min; iss >> max;
+		result = _client->Send_LocksCreateSemaphore(cur, min, max);
+		std::cout << "Method: " << method << std::endl;
+		std::cout << "Recv:   " << result << std::endl;
+	} else
+	if ( CHECK("Send_MaintenanceHello") ) {
+		std::istringstream iss(line); iss >> method;
+		std::string name; iss >> name;
+		result = _client->Send_MaintenanceHello(name);
+		std::cout << "Method: " << method << std::endl;
+		std::cout << "Recv:   " << result << std::endl;
+	} else
+	if ( CHECK("Send_LocksDump") ) {
+		std::istringstream iss(line); iss >> method;
+		result = _client->Send_LocksDump();
+		std::cout << "Method: " << method << std::endl;
+		std::cout << "Recv:   " << result << std::endl;
+	} else
+	if ( CHECK("Send_LocksDeleteSemaphore") ) {
+		std::istringstream iss(line); iss >> method;
+		std::string uuid; iss >> uuid;
+		result = _client->Send_LocksDeleteSemaphore(uuid);
+		std::cout << "Method: " << method << std::endl;
+		std::cout << "Recv:   " << result << std::endl;
+	} else
+	if ( CHECK("Send_LocksDecrementSemaphore") ) {
+		std::istringstream iss(line); iss >> method;
+		std::string uuid; iss >> uuid;
+		result = _client->Send_LocksDecrementSemaphore(uuid);
+		if ( !result.compare(uuid) ) {
+			std::cout << "Succesfully decremented semaphore" << std::endl;
+			if ( sems.find(uuid) == sems.end() ) {
+				sems.insert(std::make_pair(uuid, SemaphoreInfo(uuid)));
+			}
+			sems.find(uuid)->second.decrement();
+		}
+		std::cout << "Method: " << method << std::endl;
+		std::cout << "Recv:   " << result << std::endl;
+
+	} else
+	if ( CHECK("Send_LocksIncrementSemaphore") ) {
+		std::istringstream iss(line); iss >> method;
+		std::string uuid; iss >> uuid;
+		result = _client->Send_LocksIncrementSemaphore(uuid);
+		if ( !result.compare(uuid) ) {
+			std::cout << "Succesfully incremented semaphore" << std::endl;
+			if ( sems.find(uuid) == sems.end() ) {
+				sems.insert(std::make_pair(uuid, SemaphoreInfo(uuid)));
+			}
+			sems.find(uuid)->second.increment();
+		}
+		std::cout << "Method: " << method << std::endl;
+		std::cout << "Recv:   " << result << std::endl;
 	} else {
-		std::cout << "UNKNOWN LINE - omiting..." << std::endl;
-		std::cout << "Supported commands:" << std::endl;
-		std::cout << "{\"<some string> - send this string to server" << std::endl;
-		std::cout << "send <some string>" << std::endl;
-		std::cout << "sendraw <some data> " << std::endl;
-		std::cout << "quit" << std::endl;
+		/*std:: string Send_LocksCreateSemaphore(int CurrentVal, int MinVal, int MaxVal);
+		std::string Send_MaintenanceHello(std::string name);
+		std::string Send_LocksDeleteSemaphore(std::string uuid);
+		std::string Send_LocksDecrementSemaphore(std::string uuid);
+		std::string Send_LocksIncrementSemaphore(std::string uuid);
+		std::string Send_LocksDump();*/
+		usage();
 		return;
+	}
+}
+
+void ClientConsole::run() {
+	while(!_stop) {
+		try	{
+			this->one_run();
+		} catch (std::exception &e) {
+			std::cerr << "std:: excetion + " << e.what() << std::endl;
+		}
 	}
 }

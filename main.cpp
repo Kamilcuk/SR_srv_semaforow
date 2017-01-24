@@ -15,6 +15,7 @@ struct config_s {
 	string serverurl = "http://127.0.0.1:7890/v1/";
 	int listenport = 7890;
 	std::string listenip = "127.0.0.1";
+	int threadsnum = 4;
 };
 
 bool process_command_line(int argc, char** argv,struct config_s &config)
@@ -37,6 +38,8 @@ bool process_command_line(int argc, char** argv,struct config_s &config)
 			("listenip,l", po::value<std::string>(&config.listenip),
 				"ip address to listen on\n"
 				"defaults to 127.0.0.1 for clients, and 0.0.0.0 for server.\n")
+			("threads,t", po::value<int>(&config.threadsnum),
+				"threads number to run , default = 4")
 		;
 		po::variables_map vm;
 		po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -137,7 +140,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT, signalfunc);
 	try {
 		if ( config.is_server ) {
-			service = new Server(config.listenip, config.listenport);
+			service = new Server(config.listenip, config.listenport, config.threadsnum);
 		} else {
 			service = new Client(config.serverurl, config.listenip, config.listenport);
 		}

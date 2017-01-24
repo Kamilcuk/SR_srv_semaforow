@@ -11,14 +11,14 @@ class Server : public Servicable
 	int _port;
 	ServerServer _serverserver;
 	myhttpserver _serverserverhttpserver;
-	boost::thread _serverserverthread;
+	std::vector<boost::thread> _serverserverthreads;
 
-
-	/// uuids->Sempaphores
-	std::map<std::string,Semaphore> sems;
+	/// uuids->Sempaphores reference wrapper -  i believe i can fly..
+	std::mutex semsmutex;
+	std::map< std::string, std::unique_ptr<Semaphore> > sems;
 
 public:
-	Server(std::string serverurl, int port);
+	Server(std::string serverurl, int port, int threadsnum = 5);
 	void run();
 	void stop();
 	static bool CheckClient(std::string c,std::string &errorstr);
@@ -27,6 +27,8 @@ public:
 	std::vector<std::string> getAllOwners();
 	void HeartbeatScan();
 	void DisconnectClient(std::string o);
+
+	std::map<std::string, std::unique_ptr<Semaphore> > getSems() const;
 };
 
 #endif // SERVER_HPP

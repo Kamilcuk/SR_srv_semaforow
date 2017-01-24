@@ -1,5 +1,9 @@
 #!/bin/bash -e
 
+
+
+old_raw_mode() {
+
 PORT=${1:-7890}
 OWNER=${2:-127.0.0.1:7891}
 
@@ -15,8 +19,7 @@ send() {
 	if [[ $ret -ne 0 ]]; then
 		return;
 	fi
-	echo "\"$1\"" >&2
-       	echo "^-> \"$output\"" >&2
+	echo -ne "SEND: \"$1\" \nRECV \"$output\"\n" >&2
 	echo "$output"
 }
 
@@ -24,32 +27,44 @@ sendnull() {
 	send "$@" > /dev/null
 }
 
+_id=0
+getid() { _id=$((_id+1)); echo -n ",\"id\":\"$_id\""; }
+
 sem_new() {
-	send '{"method":"Locks.CreateSemaphore","params":[{"CurrentVal":"'${1:-1}'","MinVal":"'${2:-0}'","MaxVal":"'${3:-1}'"}]}' | jq -r '.params[0].UUID'
+	send '{"id":"1","method":"Locks.CreateSemaphore","params":[{"CurrentVal":'${1:-1}',"MinVal":'${2:-0}',"MaxVal":'${3:-1}'}]}' | jq -r '.result.UUID'
 }
 sem_del() {
-	send '{"method":"Locks.DeleteSemaphore","params":[{"UUID":"'"$1"'"}]}'
+	send '{"id":"1","method":"Locks.DeleteSemaphore","params":[{"UUID":"'"$1"'"}]}'
 }
 sem_inc() {
-	send '{"method":"Locks.IncrementSemaphore","params":[{"UUID":"'"$1"'","Owner":"'${2}'"}]}'
+	send '{"id":"1","method":"Locks.IncrementSemaphore","params":[{"UUID":"'"$1"'","Owner":"'${2}'"}]}'
 }
 sem_dec() {
-	send '{"method":"Locks.DecrementSemaphore","params":[{"UUID":"'"$1"'","Owner":"'${2}'"}]}'
+	send '{"id":"1","method":"Locks.DecrementSemaphore","params":[{"UUID":"'"$1"'","Owner":"'${2}'"}]}'
 }
 locks_dump() {
-	sendnull '{"method":"Locks.Dump"}'
+	sendnull '{"id":"1","method":"Locks.Dump","params":[{}]}'
 }
 
 #sendnull 'gupi test'
 #sendnull '{"password":"xyz","username":"xyz"}'
-#sendnull '{"method":"Maintenance.Hello","params":[{"Name":"nazwa"}]}'
-#sendnull '{"method":"Maintenance.Heartbeat"}'
-sem1=$(sem_new)
+sendnull '{"id":"1","method":"Maintenance.Hello","params":[{"Name":"nazwa"}]}'
+sendnull '{"id":"1","method":"Maintenance.Heartbeat","params":[{}]}'
+sem1=$(sem_new 2 0 2)
 locks_dump
-sem_dec $sem1 "$OWNER"
-locks_dump
-#sem_inc $sem1 "$OWNER"
-#locks_dump
+sem_dec $sem1 "$OWNER";locks_dump
+sem_inc $sem1 "$OWNER";locks_dump
+sem_inc $sem1 "$OWNER";locks_dump
+sem_inc $sem1 "$OWNER";locks_dump
+sem_dec $sem1 "$OWNER";locks_dump
+sem_dec $sem1 "$OWNER";locks_dump
+( sem_dec $sem1 "$OWNER";locks_dump; ) &
+sleep 1
+( sem_inc $sem1 "$OWNER";locks_dump; ) &
+sleep 1
+sem_inc $sem1 "$OWNER";locks_dump
+sem_inc $sem1 "$OWNER";locks_dump
+wait
 sem_del $sem1
 
 
@@ -58,12 +73,12 @@ sem_del $sem1
 # {"method":"Locks.DecrementSemaphore","params":[{"UUID":"0556e503-5bba-44a3-9447-bae8a5fb0636","Owner":"127.0.0.1:7894"}]}'
 
 
+}
 
 
-
-
-
-
-
+case "$1" in
+*)
+	old_raw_mode "$@"
+esac
 
 

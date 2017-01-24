@@ -29,29 +29,26 @@ Json::Value to_json(std::string str);
 
 
 /** too much haskell ... */
-Json::Value fillParams(Json::Value root);
+Json::Value fillResult(Json::Value root);
 template<class Param, class Value, class...Rest>
-Json::Value fillParams(Json::Value root, Param& param, Value& value, const Rest&... rest) {
+Json::Value fillResult(Json::Value root, Param& param, Value& value, const Rest&... rest) {
 	root[param]=value;
-	return fillParams(root, rest...);
+	return fillResult(root, rest...);
 }
 
 /** still too much haskell */
-void responseWithJson(httpserverresponse &res, std::string method);
+void responseWithJsonTo(httpserverresponse &res, Json::Value realroot, std::string error = std::string());
 template<class...Rest>
-void responseWithJson(httpserverresponse &res, std::string method, const Rest&... rest)
+void responseWithJsonTo(httpserverresponse &res, Json::Value realroot, std::string error, const Rest&... rest)
 {
-	Json::Value root;
-	root["method"] = method;
-	root["params"][0] = fillParams(Json::Value(), rest...);
-	fillrespOK(res, to_string(root));
-}
-
-void responseWithJsonTo(httpserverresponse &res, Json::Value realroot);
-template<class...Rest>
-void responseWithJsonTo(httpserverresponse &res, Json::Value realroot, const Rest&... rest)
-{
-	responseWithJson(res, realroot["method"].asString(), rest...);
+	Json::Value jsonresp;
+	jsonresp["method"] = realroot["method"];
+	jsonresp["id"] = realroot["id"];
+	if ( !error.empty() ) {
+		jsonresp["error"] = error;
+	}
+	jsonresp["result"] = fillResult(Json::Value(), rest...);
+	fillrespOK(res, to_string(jsonresp));
 }
 
 #endif // HELPERS_HPP

@@ -16,7 +16,7 @@ Client::Client(std::string serverurl, std::string clientip, unsigned int port) :
 	_serverurl(serverurl),
 	_owner(clientip+":"+std::to_string(port)),
 	_port(port),
-	_clientconsole(serverurl),
+	_clientconsole(this, serverurl),
 	_clientserver(this),
 	_clientserverhttpserver(
 		myhttpserver::options(_clientserver).
@@ -34,15 +34,17 @@ std::string Client::sendStrToServerStr(std::string serverurl, std::string bodyms
 	using namespace boost::network;
 	using namespace boost::network::http;
 	http::client client;
+	DBG_CONN << "sendStrToServerStr: " << serverurl << " " << bodymsg << std::endl;
 	client::request request(serverurl);
-	//DBG_CONN << "Conn: " << serverurl << std::endl;
 	request << header("Content-Type", "application/json");
 	request << header("Content-Length", std::to_string( bodymsg.length() ));
 	request << header("Connection", "close");
 	request << body(bodymsg);
 	//DBG_CONN << "Reqe: " << bodymsg;
 	client::response response = client.post(request);
-	return body(response);
+	std::string respmsg = body(response);
+	DBG_CONN << "Respmsg: " << respmsg;
+	return respmsg;
 }
 
 Json::Value Client::sendStrToServer(std::string serverurl, std::string bodymsg)

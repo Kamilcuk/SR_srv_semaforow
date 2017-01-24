@@ -54,19 +54,20 @@ boost::uuids::uuid getUuid(std::__cxx11::string u)
 
 
 
-Json::Value fillParams(Json::Value root) {
+Json::Value fillResult(Json::Value root) {
 	return root;
 }
 
-void responseWithJson(httpserverresponse &res, std::__cxx11::string method) {
-	Json::Value root;
-	root["method"] = method;
-	fillrespOK(res, to_string(root));
-}
-
-void responseWithJsonTo(httpserverresponse &res, Json::Value realroot)
+void responseWithJsonTo(httpserverresponse &res, Json::Value realroot, std::string error)
 {
-	responseWithJson(res, realroot["method"].asString());
+	Json::Value jsonresp;
+	jsonresp["method"] = realroot["method"];
+	jsonresp["id"] = realroot["id"];
+	if ( !error.empty() ) {
+		jsonresp["error"] = error;
+	}
+	jsonresp["result"] = Json::Value();
+	fillrespOK(res, to_string(jsonresp));
 }
 
 Json::Value to_json(std::__cxx11::string str)
