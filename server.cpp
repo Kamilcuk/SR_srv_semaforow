@@ -12,9 +12,13 @@
 #include <boost/uuid/uuid_io.hpp>
 #include "client.hpp"
 
-std::map<std::string, std::unique_ptr<Semaphore> > Server::getSems() const
+std::map<std::string, SemaphoreData > Server::getSemsData()
 {
-	std::map<std::string, std::unique_ptr<Semaphore> > ret;
+	std::lock_guard<std::mutex> guard(semsmutex);
+	std::map<std::string, SemaphoreData> ret;
+	for(auto&& s : sems) {
+		ret.insert(std::make_pair(s.first, s.second->getData()));
+	}
 	return ret;
 }
 
@@ -54,6 +58,7 @@ bool Server::CheckClient(std::string c,std::string &errorstr)
 
 std::vector<std::string> Server::getAllOwners()
 {
+	std::lock_guard<std::mutex> guard(semsmutex);
 	std::vector<std::string> ret;
 	for(auto const& isems : sems) {
 		const std::unique_ptr<Semaphore> &s = isems.second;
@@ -67,6 +72,7 @@ std::vector<std::string> Server::getAllOwners()
 
 void Server::DisconnectClient(std::string o)
 {
+	std::lock_guard<std::mutex> guard(semsmutex);
 	for(auto& isems : sems) {
 		const std::unique_ptr<Semaphore> &s = isems.second;
 		std::vector<std::string> owners = s->getOwners();
@@ -127,6 +133,7 @@ void Server::operatorO_parseJson_in(httpserverresponse &res, Json::Value root)
 		return responseWithJsonTo(res, root);
 	} else
 	if ( !root["method"].compare("Locks.CreateSemaphore") ) {
+		std::lock_guard<std::mutex> guard(semsmutex);
 		int CurrentVal;
 		int MinVal;
 		int MaxVal;
@@ -157,6 +164,7 @@ void Server::operatorO_parseJson_in(httpserverresponse &res, Json::Value root)
 		return responseWithJsonTo(res, root, std::string(), "UUID", u);
 	} else
 	if ( !root["method"].compare("Locks.DeleteSemaphore") ) {
+		std::lock_guard<std::mutex> guard(semsmutex);
 		std::string u = root["params"][0]["UUID"].asString();
 		auto isem = sems.find(u);
 		if ( isem == sems.end() ) {
@@ -166,25 +174,33 @@ void Server::operatorO_parseJson_in(httpserverresponse &res, Json::Value root)
 		return responseWithJsonTo(res, root, std::string(), "UUID", u);
 	} else
 	if ( !root["method"].compare("Locks.DecrementSemaphore") ) {
-		std::string u = root["params"][0]["UUID"].asString();
-		std::string o = root["params"][0]["Owner"].asString();
-		if ( o.empty() ) {
-			return responseWithJsonTo(res, root, "no owner given in the json");
-		}
-		auto isem = sems.find(u);
-		if ( isem == sems.end() ) {
-			return responseWithJsonTo(res, root, "no such semaphore with guven uuid - "+u);
+		std::map<std::string, std::unique_ptr<Semaphore>>::iterator isem;
+		std::string u, o;
+		{
+			std::lock_guard<std::mutex> guard(semsmutex);
+			u = root["params"][0]["UUID"].asString();
+			o = root["params"][0]["Owner"].asString();
+			if ( o.empty() ) {
+				return responseWithJsonTo(res, root, "no owner given in the json");
+			}
+			isem = sems.find(u);
+			if ( isem == sems.end() ) {
+				return responseWithJsonTo(res, root, "no such semaphore with guven uuid - "+u);
+			}
+
+			std::string errorstr;
+			if ( !Server::CheckClient(o, errorstr) ) {
+				return responseWithJsonTo(res, root, "CheckClient: "+errorstr);
+			}
 		}
 
-		std::string errorstr;
-		if ( !Server::CheckClient(o, errorstr) ) {
-			return responseWithJsonTo(res, root, "CheckClient: "+errorstr);
-		}
-
+		/* long polling here - global mutex unlocked */
 		isem->second->decrement(o);
+
 		return responseWithJsonTo(res, root, std::string(), "UUID", u);
 	}else
 	if ( !root["method"].compare("Locks.IncrementSemaphore") ) {
+		std::lock_guard<std::mutex> guard(semsmutex);
 		std::string u = root["params"][0]["UUID"].asString();
 		std::string o = root["params"][0]["Owner"].asString();
 		if ( o.empty() ) {
@@ -207,8 +223,8 @@ void Server::operatorO_parseJson_in(httpserverresponse &res, Json::Value root)
 		ret["method"] = root["Locks.Dump"];
 		ret["id"] = root["id"];
 		unsigned int i=0;
-		for(auto&& isems : sems) {
-			SemaphoreData sd = isems.second->getSemaphoreData();
+		for(auto&& isems : getSemsData()) {
+			SemaphoreData sd = isems.second;
 
 			ret["result"]["Semaphores"][i]["CurrentVal"] = sd.cur;
 			ret["result"]["Semaphores"][i]["MaxVal"] = sd.max;

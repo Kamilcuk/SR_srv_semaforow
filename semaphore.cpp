@@ -31,7 +31,7 @@ int Semaphore::getCur()
 	return cur;
 }
 
-SemaphoreData Semaphore::getSemaphoreData()
+SemaphoreData Semaphore::getData()
 {
 	std::lock_guard<std::mutex> guard(varsmutex_);
 	SemaphoreData ret;
@@ -73,12 +73,23 @@ void Semaphore::increment(std::__cxx11::string o) {
 void Semaphore::decrement(std::__cxx11::string o) {
 	std::unique_lock<decltype(mutex_)> lock(mutex_);
 
+	{
+		// dodajemy tutaj ownera. Jeśli z tym ownerem nie będzie heartbeata,
+		// to wtedy będie odpalony increment, który odpali condition.notify
+		// który spowoduje wyjście z tej pętli ponizej
+		// ni wiem jednak który wyjdzie z tej pętli, ale to tak naprawdę nie ma znaczenia.
+		std::lock_guard<std::mutex> guard(varsmutex_);
+		owners.push_back(o);
+	}
+
 	while( ({ std::lock_guard<std::mutex> guard(varsmutex_); cur <= min; }) ) {
 		condition_.wait(lock);
 	}
-	std::lock_guard<std::mutex> guard(varsmutex_);
-	owners.push_back(o);
-	--cur;
+
+	{
+		std::lock_guard<std::mutex> guard(varsmutex_);
+		--cur;
+	}
 }
 
 bool Semaphore::try_decrement(std::__cxx11::string o) {

@@ -28,18 +28,20 @@ bool process_command_line(int argc, char** argv,struct config_s &config)
 		desc.add_options()
 			("help,h",     "produce help message")
 			("type,t",   po::value<std::string>(&type)->required(),
-				"type [client|server] mandatory")
+				"type [client|server] - field is mandatory")
 			("serverurl,s", po::value<std::string>(&config.serverurl),
-				"serverurl to connect to when beeing a client.\n"
-				"For client in format of x.x.x.x:port\n"
-				"For server is ignored\n")
+				"Serverurl to connect to when beeing a client. \n"
+				"Proper field format is x.x.x.x:port \n"
+				"If type=server, then this field is ignored\n")
 			("listenport,p", po::value<int>(&config.listenport),
-				"port to listen on. Default 7890 for server, 7891 for client")
+				"Port to listen on for incoming connections.\n"
+				"Default is 7890 for server, 7891 for client.\n")
 			("listenip,l", po::value<std::string>(&config.listenip),
-				"ip address to listen on\n"
-				"defaults to 127.0.0.1 for clients, and 0.0.0.0 for server.\n")
+				"Ip address to listen on for incoming connections.\n"
+				"Default is 127.0.0.1 for clients and 0.0.0.0 for server.\n")
 			("threads,t", po::value<int>(&config.threadsnum),
-				"threads number to run , default = 4")
+				"threads number to run , default = 4\n"
+				"If type=client, this field is ignored\n")
 		;
 		po::variables_map vm;
 		po::store(po::parse_command_line(argc, argv, desc), vm);

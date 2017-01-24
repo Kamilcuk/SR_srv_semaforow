@@ -40,7 +40,7 @@ public:
 	int getMin();
 	int getCur();
 
-	SemaphoreData getSemaphoreData();
+	SemaphoreData getData();
 };
 
 

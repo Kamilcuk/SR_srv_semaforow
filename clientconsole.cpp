@@ -62,12 +62,12 @@ void usage()
 	 << "send <some string>" << std::endl
 	 << "sendraw <some data> " << std::endl
 	 << "printinfo" << std::endl
-	 << "Send_LocksCreateSemaphore <CurrentVal> <MinVal> <MaxVal>" << std::endl
-	 << "Send_MaintenanceHello <name>" << std::endl
-	 << "Send_LocksDeleteSemaphore <uuid>" << std::endl
-	 << "Send_LocksDecrementSemaphore <uuid>" << std::endl
-	 << "Send_LocksIncrementSemaphore <uuid>" << std::endl
-	 << "Send_LocksDump" << std::endl
+	 << "Maintenance.Hello <name>" << std::endl
+	 << "Locks.CreateSemaphore <CurrentVal> <MinVal> <MaxVal>" << std::endl
+	 << "Locks.DeleteSemaphore <uuid>" << std::endl
+	 << "Locks.DecrementSemaphore <uuid>" << std::endl
+	 << "Locks.IncrementSemaphore <uuid>" << std::endl
+	 << "Locks.Dump" << std::endl
 	 << "quit" << std::endl;
 }
 
@@ -106,34 +106,34 @@ void ClientConsole::one_run()
 					<< std::endl;
 		 }
 	} else
-	if ( CHECK("Send_LocksCreateSemaphore") ) {
+	if ( CHECK("Locks.CreateSemaphore") ) {
 		std::istringstream iss(line); iss >> method;
 		int cur, min, max; iss >> cur; iss >> min; iss >> max;
 		result = _client->Send_LocksCreateSemaphore(cur, min, max);
 		std::cout << "Method: " << method << std::endl;
 		std::cout << "Recv:   " << result << std::endl;
 	} else
-	if ( CHECK("Send_MaintenanceHello") ) {
+	if ( CHECK("Maintenance.Hello") ) {
 		std::istringstream iss(line); iss >> method;
 		std::string name; iss >> name;
 		result = _client->Send_MaintenanceHello(name);
 		std::cout << "Method: " << method << std::endl;
 		std::cout << "Recv:   " << result << std::endl;
 	} else
-	if ( CHECK("Send_LocksDump") ) {
+	if ( CHECK("Locks.Dump") ) {
 		std::istringstream iss(line); iss >> method;
 		result = _client->Send_LocksDump();
 		std::cout << "Method: " << method << std::endl;
 		std::cout << "Recv:   " << result << std::endl;
 	} else
-	if ( CHECK("Send_LocksDeleteSemaphore") ) {
+	if ( CHECK("Locks.DeleteSemaphore") ) {
 		std::istringstream iss(line); iss >> method;
 		std::string uuid; iss >> uuid;
 		result = _client->Send_LocksDeleteSemaphore(uuid);
 		std::cout << "Method: " << method << std::endl;
 		std::cout << "Recv:   " << result << std::endl;
 	} else
-	if ( CHECK("Send_LocksDecrementSemaphore") ) {
+	if ( CHECK("Locks.DecrementSemaphore") ) {
 		std::istringstream iss(line); iss >> method;
 		std::string uuid; iss >> uuid;
 		result = _client->Send_LocksDecrementSemaphore(uuid);
@@ -148,7 +148,7 @@ void ClientConsole::one_run()
 		std::cout << "Recv:   " << result << std::endl;
 
 	} else
-	if ( CHECK("Send_LocksIncrementSemaphore") ) {
+	if ( CHECK("Locks.IncrementSemaphore") ) {
 		std::istringstream iss(line); iss >> method;
 		std::string uuid; iss >> uuid;
 		result = _client->Send_LocksIncrementSemaphore(uuid);

@@ -5,6 +5,8 @@
 #include <string>
 #include "serverserver.hpp"
 
+#include "semaphore.hpp"
+
 class Server : public Servicable
 {
 	std::string _serverurl;
@@ -28,7 +30,7 @@ public:
 	void HeartbeatScan();
 	void DisconnectClient(std::string o);
 
-	std::map<std::string, std::unique_ptr<Semaphore> > getSems() const;
+	std::map<std::string, SemaphoreData> getSemsData();
 };
 
 #endif // SERVER_HPP
