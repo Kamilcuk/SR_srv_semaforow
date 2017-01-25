@@ -19,7 +19,7 @@ std::map<std::string,std::string> AbstractServer::headersToMap(auto headers) {
 
 void AbstractServer::operator() (httpserverrequest const &req, httpserverresponse &res) {
 	//std::cout << request.headers[0].string();
-	DEBUGMSG("new conn %s from %s with body %s \n", req.method.c_str(), req.source.c_str(), req.body.c_str());
+	DEBUGMSG("new conn %s from %s with body %s", req.method.c_str(), req.source.c_str(), req.body.c_str());
 	/*std::cout << request.source << "\n";
 	for(int i=0;i<request.headers.size();i++) {
 		std::cout << request.headers[i].name <<"="<<request.headers[i].value<< "\n";

@@ -60,7 +60,10 @@ std::string Client::sendStrToServerStr(std::string serverurl, std::string bodyms
 		options.timeout(Timeout);
 	}
 	http::client client(options);
-	DBG_CONN << "sendStrToServerStr: " << serverurl << " " << bodymsg << std::endl;
+	if ( serverurl.substr(0,7).compare("http://") ) {
+		serverurl="http://"+serverurl+"/v1";
+	}
+	DBG_CONN << "sendStrToServerStr: " << serverurl << " " << bodymsg;
 	client::request request(serverurl);
 	request << header("Content-Type", "application/json");
 	request << header("Content-Length", std::to_string( bodymsg.length() ));
@@ -210,7 +213,7 @@ std::string Client::Send_LocksDump()
 std::string Client::Send_ClientProbe_Static(std::string clienturl, std::string InitiatorAddr)
 {
 	Json::Value root;   // will contains the root value after parsing.
-	root["method"] = "Locks.Probe";
+	root["method"] = "Client.Probe";
 	root["params"][0]["InitiatorAddr"] = InitiatorAddr;
 	Json::Value ret = sendToServer(clienturl, root);
 	return to_string( ret["result"] );

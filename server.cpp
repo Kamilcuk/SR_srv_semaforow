@@ -48,7 +48,7 @@ bool Server::CheckClient(std::string c,std::string &errorstr)
 		Json::Value root;   // will contains the root value after parsing.
 		root["method"] = "Maintenance.Heartbeat";
 		root["params"][0] = Json::Value();
-		Json::Value ret = Client::sendToServer(realc, root);
+		Client::sendToServer(realc, root, 3);
 		return true;
 	} catch(const std::exception &e) {
 		std::cerr << e.what();
@@ -257,7 +257,7 @@ void Server::operatorO_parseJson_in(httpserverresponse &res, Json::Value root)
 
 		// remote from owners ReturnAddr
 		for( auto iter = owners.begin() ; iter != owners.end() ; ) {
-		  if( (*iter).compare(ReturnAddr) ) {
+		  if( !(*iter).compare(ReturnAddr) ) {
 			iter = owners.erase( iter ) ; // advances iter
 		  } else {
 			++iter ; // don't remove
@@ -265,8 +265,25 @@ void Server::operatorO_parseJson_in(httpserverresponse &res, Json::Value root)
 		}
 
 		for(auto &o : owners) {
-			Client::Send_ClientProbe_Static(o, InitiatorAddr);
+			try {
+				Client::Send_ClientProbe_Static(o, InitiatorAddr);
+			} catch (std::exception &e) {
+				std::cerr << "Unhandled exeptionin ClientProbe thread with o="<<o<<" InitiatorAddr="<<InitiatorAddr<<" e.what()="<<e.what()<<std::endl;
+			}
 		}
+		/* ping all clients in another thread */
+		/* TODO: threads dont get deleted... XD */
+		/*_serverserverthreads.push_back(boost::thread(
+			[](std::vector<std::string> &owners, std::string &InitiatorAddr) {
+				for(auto &o : owners) {
+					try {
+						Client::Send_ClientProbe_Static(o, InitiatorAddr);
+					} catch (std::exception &e) {
+						std::cerr << "Unhandled exeptionin ClientProbe thread with o="<<o<<" InitiatorAddr="<<InitiatorAddr<<" e.what()="<<e.what()<<std::endl;
+					}
+				}
+			}, owners, InitiatorAddr)
+		);*/
 		return responseWithJsonTo(res, root, std::string());
 	}else {
 		return responseWithJsonTo(res, root, "No method field or unkown method field value in json body!");

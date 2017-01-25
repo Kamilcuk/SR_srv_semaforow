@@ -63,10 +63,10 @@ void ClientServer::operatorO_parseJson_in(httpserverresponse &res, Json::Value r
 	if ( !root["method"].compare("Client.Probe") ) {
 		std::string InitiatorAddr = root["params"][0]["InitiatorAddr"].asString();
 
-		std::regex reg("[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]+");
-		if ( std::regex_match(InitiatorAddr, reg) ) {
-			return responseWithJsonTo(res, root, "InitiatorAddr didn't get through regex ");
-		}
+		//std::regex reg("[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}:[0-9]+");
+		//if ( std::regex_match(InitiatorAddr, reg) ) {
+//			return responseWithJsonTo(res, root, "InitiatorAddr didn't get through regex ");
+//		}
 
 		std::string errorcode;
 		if ( !compareAddresses(InitiatorAddr, _client->getOwner(), errorcode) ) {
