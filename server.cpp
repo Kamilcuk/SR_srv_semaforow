@@ -11,6 +11,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include "client.hpp"
+#include <algorithm>    // std::remove_if
 
 std::map<std::string, SemaphoreData > Server::getSemsData()
 {
@@ -58,15 +59,16 @@ bool Server::CheckClient(std::string c,std::string &errorstr)
 
 std::vector<std::string> Server::getAllOwners()
 {
-	std::lock_guard<std::mutex> guard(semsmutex);
 	std::vector<std::string> ret;
-	for(auto const& isems : sems) {
-		const std::unique_ptr<Semaphore> &s = isems.second;
-		std::vector<std::string> owners = s->getOwners();
-		for(auto const& o : owners) {
+	for(auto const& isems : getSemsData()) {
+		SemaphoreData s = isems.second;
+		for(auto const& o : s.owners) {
 			ret.push_back(o);
 		}
 	}
+	/* this should be a one liner... */
+	sort( ret.begin(), ret.end() );
+	ret.erase( unique( ret.begin(), ret.end() ), ret.end() );
 	return ret;
 }
 
@@ -89,10 +91,7 @@ void Server::HeartbeatScan()
 {
 	DEBUGMSG("initialiting heartbeat detection\n");
 	std::vector<std::string> v = getAllOwners();
-	std::vector<std::string> uniquev = v;
-	std::sort(uniquev.begin(),uniquev.end());
-	std::unique(uniquev.begin(), uniquev.end());
-	for(auto const &o : uniquev) {
+	for(auto const &o : v) {
 		std::string errorstr;
 		if ( !Server::CheckClient(o, errorstr) ) {
 			DEBUGMSG("No connection with client: %s errostr=%s \n", o.c_str(), errorstr.c_str());
@@ -113,6 +112,8 @@ void Server::run()
 		}
 	}
 	_serverserverhttpserver.stop();
+	for(auto &t : _serverserverthreads)
+		t.join();
 }
 
 void Server::stop()
@@ -127,7 +128,7 @@ void Server::operatorO_parseJson_in(httpserverresponse &res, Json::Value root)
 	// main switch, yay
 	if ( !root["method"].compare("Maintenance.Hello") ) {
 		return responseWithJsonTo(res, root, std::string(),
-						 "Message", "Hello, "+root["params"][0]["M ame"].asString());
+						 "Message", "Hello, "+root["params"][0]["Name"].asString());
 	} else
 	if ( !root["method"].compare("Maintenance.Heartbeat") ) {
 		return responseWithJsonTo(res, root);
@@ -231,15 +232,42 @@ void Server::operatorO_parseJson_in(httpserverresponse &res, Json::Value root)
 			ret["result"]["Semaphores"][i]["MinVal"] = sd.min;
 			ret["result"]["Semaphores"][i]["UUID"] = isems.first;
 			ret["result"]["Semaphores"][i]["owners_size"] = sd.owners.size();
-			for(unsigned int j=0; j<sd.owners.size(); ++j) {
-				root["result"]["Semaphores"][i]["owners"][j] = sd.owners[j];
+			if ( sd.owners.size() > 0 ) {
+				for(unsigned int j=0; j<sd.owners.size(); ++j) {
+					root["result"]["Semaphores"][i]["owners"][j] = sd.owners[j];
+				}
+			} else {
+				root["result"]["Semaphores"][i]["owners"][0] = Json::Value();
 			}
 			i++;
 		}
 		return fillrespOKJson(res, ret);
 	}else
 	if ( !root["method"].compare("Locks.Probe") ) {
-		// somewhere else implemented
+		std::string InitiatorAddr = root["params"][0]["InitiatorAddr"].asString();
+		std::string ReturnAddr = root["params"][0]["ReturnAddr"].asString();
+		std::string UUID = root["params"][0]["UUID"].asString();
+
+		// get owners
+		std::vector<std::string> owners = getSemsData().find(UUID)->second.owners;
+
+		// sort + remove duplicates
+		sort( owners.begin(), owners.end() );
+		owners.erase( unique( owners.begin(), owners.end() ), owners.end() );
+
+		// remote from owners ReturnAddr
+		for( auto iter = owners.begin() ; iter != owners.end() ; ) {
+		  if( (*iter).compare(ReturnAddr) ) {
+			iter = owners.erase( iter ) ; // advances iter
+		  } else {
+			++iter ; // don't remove
+		  }
+		}
+
+		for(auto &o : owners) {
+			Client::Send_ClientProbe_Static(o, InitiatorAddr);
+		}
+		return responseWithJsonTo(res, root, std::string());
 	}else {
 		return responseWithJsonTo(res, root, "No method field or unkown method field value in json body!");
 	}

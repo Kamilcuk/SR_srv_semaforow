@@ -106,7 +106,7 @@ std::thread quittingthread;
 
 void waitSecThenExit(unsigned int sec) {
 	sleep(sec);
-	std::cerr << "SOMETHING INCREDIBLY WRONG. Forcing quit";
+	std::cerr << "Forcing quit";
 	exit(1);
 }
 
@@ -137,6 +137,7 @@ int main(int argc, char *argv[])
 	std::cout << "Params: " << std::string(config.is_server?"server":"client")
 			<<" listenip: "<< config.listenip
 		   <<" listenport: "<<config.listenport
+		  <<" config.threadsnum: "<<config.threadsnum
 		  <<" serverurl: "<<config.serverurl<<" \n";
 
 	signal(SIGINT, signalfunc);
@@ -144,7 +145,7 @@ int main(int argc, char *argv[])
 		if ( config.is_server ) {
 			service = new Server(config.listenip, config.listenport, config.threadsnum);
 		} else {
-			service = new Client(config.serverurl, config.listenip, config.listenport);
+			service = new Client(config.serverurl, config.listenip, config.listenport, config.threadsnum);
 		}
 		std::cout << "Started up, ready to serve!\n";
 		service->run();

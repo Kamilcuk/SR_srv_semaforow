@@ -12,7 +12,7 @@ boost::uuids::uuid getUuid(std::string u);
 std::string getUuidStr();
 std::string getUuidStr(boost::uuids::uuid u);
 
-#define DEBUGMSG(fmt, ...) fprintf(stderr, "DBG: %s:%d:%s(): " fmt, \
+#define DEBUGMSG(fmt, ...) printf("DBG: %s:%d:%s(): " fmt, \
 	__FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 
 #define _unused_ __attribute__((unused))
@@ -50,5 +50,17 @@ void responseWithJsonTo(httpserverresponse &res, Json::Value realroot, std::stri
 	jsonresp["result"] = fillResult(Json::Value(), rest...);
 	fillrespOK(res, to_string(jsonresp));
 }
+
+template<typename Out>
+void split(const std::string &s, char delim, Out result) {
+	std::stringstream ss;
+	ss.str(s);
+	std::string item;
+	while (std::getline(ss, item, delim)) {
+		*(result++) = item;
+	}
+}
+
+std::vector<std::string> split(const std::string &s, char delim);
 
 #endif // HELPERS_HPP

@@ -38,23 +38,7 @@ Json::Value ClientConsole::sendlineJsonJson(Json::Value msg)
 	return ret;
 }
 
-struct SemaphoreInfo
-{
-	static int number;
-	int state = 0;
-	std::string uuid;
-	SemaphoreInfo(std::string _uuid) : uuid(_uuid) {
-		number++;
-	}
-	void increment() { state++; }
-	void decrement() { state--; }
-};
-int SemaphoreInfo::number = 1;
-
-/// uuid -> SemaphoreInfo
-std::map<std::string, SemaphoreInfo> sems;
-
-void usage()
+void ClientConsole::usage()
 {
 	std::cout << "UNKNOWN LINE - omiting..." << std::endl
 	 << "Supported commands:" << std::endl
@@ -68,6 +52,9 @@ void usage()
 	 << "Locks.DecrementSemaphore <uuid>" << std::endl
 	 << "Locks.IncrementSemaphore <uuid>" << std::endl
 	 << "Locks.Dump" << std::endl
+	 << "Locks.Probe <InitiatorAddr> <uuid>" << std::endl
+	 << "Client.Probe <clienturl> <InitiatorAddr>" << std::endl
+	 << "log" << std::endl
 	 << "quit" << std::endl;
 }
 
@@ -75,6 +62,10 @@ void ClientConsole::one_run()
 {
 	std::string method;
 	std::string result;
+
+	if ( _client->getDeadlock() ) {
+		std::cout << "DEADLOCK DETECTED! \n" << std::endl;
+	}
 
 	std::cout << "> ";
 	std::string line;
@@ -94,15 +85,15 @@ void ClientConsole::one_run()
 		raise(SIGINT); // yay!
 #define CHECK(x) ({ method = (x); std::regex_match(line, std::regex(method+".*")); })
 	} else
-	if ( CHECK("printinfo") ) {
+	if ( CHECK("printinfo") || CHECK("log") ) {
 		std::cout << "Printing information about owned sems \n";
 		std::cout << "Initial sem state was 0 \n";
-		 for(auto &s : sems ) {
+		 for(auto &s : _client->getSems() ) {
 			 std::cout
 					<< " s.f.uuid: " << s.first
 					<< " s.s.uuid: " << s.second.uuid
-					<< " s.number: " << s.second.number
-					<< " s.state:  " << s.second.state
+					<< " s.value:  " << s.second.value
+					<< " s.status: " << s.second.status
 					<< std::endl;
 		 }
 	} else
@@ -120,12 +111,6 @@ void ClientConsole::one_run()
 		std::cout << "Method: " << method << std::endl;
 		std::cout << "Recv:   " << result << std::endl;
 	} else
-	if ( CHECK("Locks.Dump") ) {
-		std::istringstream iss(line); iss >> method;
-		result = _client->Send_LocksDump();
-		std::cout << "Method: " << method << std::endl;
-		std::cout << "Recv:   " << result << std::endl;
-	} else
 	if ( CHECK("Locks.DeleteSemaphore") ) {
 		std::istringstream iss(line); iss >> method;
 		std::string uuid; iss >> uuid;
@@ -137,13 +122,6 @@ void ClientConsole::one_run()
 		std::istringstream iss(line); iss >> method;
 		std::string uuid; iss >> uuid;
 		result = _client->Send_LocksDecrementSemaphore(uuid);
-		if ( !result.compare(uuid) ) {
-			std::cout << "Succesfully decremented semaphore" << std::endl;
-			if ( sems.find(uuid) == sems.end() ) {
-				sems.insert(std::make_pair(uuid, SemaphoreInfo(uuid)));
-			}
-			sems.find(uuid)->second.decrement();
-		}
 		std::cout << "Method: " << method << std::endl;
 		std::cout << "Recv:   " << result << std::endl;
 
@@ -152,13 +130,27 @@ void ClientConsole::one_run()
 		std::istringstream iss(line); iss >> method;
 		std::string uuid; iss >> uuid;
 		result = _client->Send_LocksIncrementSemaphore(uuid);
-		if ( !result.compare(uuid) ) {
-			std::cout << "Succesfully incremented semaphore" << std::endl;
-			if ( sems.find(uuid) == sems.end() ) {
-				sems.insert(std::make_pair(uuid, SemaphoreInfo(uuid)));
-			}
-			sems.find(uuid)->second.increment();
-		}
+		std::cout << "Method: " << method << std::endl;
+		std::cout << "Recv:   " << result << std::endl;
+	} else
+	if ( CHECK("Locks.Dump") ) {
+		std::istringstream iss(line); iss >> method;
+		result = _client->Send_LocksDump();
+		std::cout << "Method: " << method << std::endl;
+		std::cout << "Recv:   " << result << std::endl;
+	} else
+	if ( CHECK("Locks.Probe") ) {
+		std::istringstream iss(line); iss >> method;
+		std::string InitiatorAddr, UUID; iss >> InitiatorAddr; iss >> UUID;
+		result = _client->Send_LocksProbe(InitiatorAddr, UUID);
+		std::cout << "Method: " << method << std::endl;
+		std::cout << "Recv:   " << result << std::endl;
+	} else
+	if ( CHECK("Client.Probe") ) {
+		std::istringstream iss(line); iss >> method;
+		std::string clienturl; iss >> clienturl;
+		std::string InitiatorAddr; iss >> InitiatorAddr;
+		result = _client->Send_ClientProbe_Static(clienturl, InitiatorAddr);
 		std::cout << "Method: " << method << std::endl;
 		std::cout << "Recv:   " << result << std::endl;
 	} else {

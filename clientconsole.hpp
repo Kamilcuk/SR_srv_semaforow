@@ -15,6 +15,8 @@ public:
 	void sendline(std::string msg);
 	Json::Value sendlineJsonJson(Json::Value msg);
 	void one_run();
+
+	void usage();
 };
 
 #endif // CLIENTCONSOLE_HPP

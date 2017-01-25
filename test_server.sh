@@ -101,7 +101,78 @@ sem_del $sem3
 
 }
 
+run_child() {
+	local tmpdir=$1
+	local writedesc=$2
+	local readdesc=$3
+	shift 3
+        local fw=$tmpdir/fw$writedesc
+        local fr=$tmpdir/fr$readdesc
+        mkfifo $fr $fw
+        ( set -x; "$@" ) <$fw >$fr &
+	local child=$!
+        exec 3>$fw
+        exec 4<$fr
+	echo -ne "$child"
+}
+
+
+client_mode() {
+	SERVERURL=${1:-127.0.0.1:7890}
+	PORT1=${2:-$((7890+${RANDOM}%100))}
+	PORT2=${3:-7900}
+
+	tmpdir=$(mktemp -d)
+	fw=$tmpdir/fw
+	fr=$tmpdir/fr
+	mkfifo $fr $fw
+	( set -x; ./SR_srv_semaforow --type client --listenport $PORT1 --listenip 127.0.0.1 --serverurl $SERVERURL ) <$fw >$fr &
+	child=$!
+	exec 3>$fw
+	exec 4<$fr
+	ctrl_c() { 
+		kill $child
+		rm -r $tmpdir
+	}
+	readRECV() {
+		while read -t 1 line; do
+			echo "PROGRAM: $line" >&2
+			if [[ $line =~ ^Recv: ]]; then
+				echo $line | sed 's/Recv:[ ]*//'
+				return
+			fi
+		done
+	}
+	sendrecv() {
+		echo "$1" >&3
+		recv=$(readRECV <&4)
+		echo -e "v-> $1 \n^-> $recv\n"
+		export recv
+	}
+
+	trap 'ctrl_c' SIGINT
+
+	recv=""
+
+	sendrecv 'Maintenance.Hello Bash_Test_Script'
+	sendrecv 'Locks.CreateSemaphore 2 0 2'
+	sem1=$recv
+	sendrecv "Locks.Dump"
+	sendrecv "Locks.DecrementSemaphore $sem1"
+	sendrecv "Locks.Probe 127.0.0.1:$PORT1 $sem1"
+	sleep 2
+	sendrecv "Locks.Dump"
+	sendrecv "Locks.DeleteSemaphore $sem1"
+
+	echo
+	ctrl_c
+}
+
 case "$1" in
+client)
+	shift
+	client_mode "$@"
+	;;
 raw_mode*)
 	func=$1
 	shift
