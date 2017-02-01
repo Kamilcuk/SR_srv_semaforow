@@ -206,6 +206,7 @@ std::string Client::Send_LocksDump()
 {
 	Json::Value root;   // will contains the root value after parsing.
 	root["method"] = "Locks.Dump";
+	root["params"][0] = Json::Value();
 	Json::Value ret = send(root);
 	return to_string( ret["result"] );
 }
