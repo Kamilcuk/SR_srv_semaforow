@@ -52,10 +52,11 @@ void ClientConsole::usage()
 	 << "Locks.DecrementSemaphore <uuid>" << std::endl
 	 << "Locks.IncrementSemaphore <uuid>" << std::endl
 	 << "Locks.Dump" << std::endl
-	 << "Locks.Probe <InitiatorAddr> <uuid>" << std::endl
+	 << "Locks.Probe <InitiatorAddr> <ReturnAddr> <uuid>" << std::endl
 	 << "Client.Probe <clienturl> <InitiatorAddr>" << std::endl
 	 << "log" << std::endl
-	 << "quit" << std::endl;
+	 << "quit" << std::endl
+	 << "exit" << std::endl;
 }
 
 void ClientConsole::one_run()
@@ -80,7 +81,8 @@ void ClientConsole::one_run()
 	if ( std::regex_match(line, std::regex("\\{\".*")) ) {
 		sendline( line );
 	} else
-	if ( std::regex_match(line, std::regex("quit")) ) {
+	if ( std::regex_match(line, std::regex("quit")) || std::regex_match(line, std::regex("exit")) ) {
+		_client->SafeExit();
 		this->stop();
 		raise(SIGINT); // yay!
 #define CHECK(x) ({ method = (x); std::regex_match(line, std::regex(method+".*")); })
@@ -141,8 +143,9 @@ void ClientConsole::one_run()
 	} else
 	if ( CHECK("Locks.Probe") ) {
 		std::istringstream iss(line); iss >> method;
-		std::string InitiatorAddr, UUID; iss >> InitiatorAddr; iss >> UUID;
-		result = _client->Send_LocksProbe(InitiatorAddr, UUID);
+		std::string InitiatorAddr, ReturnAddr,	UUID;
+		iss >> InitiatorAddr; iss >> ReturnAddr; iss >> UUID;
+		result = _client->Send_LocksProbe_all(ReturnAddr, InitiatorAddr, UUID);
 		std::cout << "Method: " << method << std::endl;
 		std::cout << "Recv:   " << result << std::endl;
 	} else

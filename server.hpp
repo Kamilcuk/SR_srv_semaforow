@@ -19,6 +19,9 @@ class Server : public Servicable
 	std::mutex semsmutex;
 	std::map< std::string, std::unique_ptr<Semaphore> > sems;
 
+	/// owners heartbeat count
+	std::map<std::string, unsigned char> ohbcount;
+
 public:
 	Server(std::string serverurl, int port, int threadsnum = 5);
 	void run();

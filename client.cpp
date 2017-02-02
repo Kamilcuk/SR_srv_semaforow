@@ -231,6 +231,17 @@ std::string Client::Send_LocksProbe(std::string InitiatorAddr, std::string uuid)
 	return to_string( ret["result"] );
 }
 
+std::string Client::Send_LocksProbe_all(std::string ReturnAddr, std::string InitiatorAddr, std::string uuid)
+{
+	Json::Value root;   // will contains the root value after parsing.
+	root["method"] = "Locks.Probe";
+	root["params"][0]["InitiatorAddr"] = InitiatorAddr;
+	root["params"][0]["ReturnAddr"] = ReturnAddr;
+	root["params"][0]["UUID"] = uuid;
+	Json::Value ret = send(root);
+	return to_string( ret["result"] );
+}
+
 void Client::run()
 {
 	while(!_stop) {
@@ -253,7 +264,20 @@ void Client::SendLocksToAllServersWhenClientProbe(std::string InitiatorAddr)
 	std::lock_guard<std::mutex> guard(semsmutex);
 	for(auto &s : sems) {
 		 if ( !s.second.status.compare("Polling Decrement") ) {
-			 (void)Send_LocksProbe(InitiatorAddr, s.first);
+			 _clientserverthreads.push_back( boost::thread(
+				&Client::Send_LocksProbe, this, InitiatorAddr, s.first
+			));
+		}
+	}
+}
+
+void Client::SafeExit() {
+	std::cerr << "EXIT Safe exiting - incrementing all decremented semaphores" << std::endl;
+	for(auto &s : sems) {
+		std::cout << " s.second.value=" << s.second.value << std::endl;
+		for(int i=s.second.value; i<0 ; ++i) {
+			std::cout << "i=" << i << std::endl;
+			Send_LocksIncrementSemaphore(s.second.uuid);
 		}
 	}
 }

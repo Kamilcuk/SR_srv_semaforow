@@ -15,7 +15,7 @@ public:
 	// AbstractServer interface
 public:
 	void operatorO_parseJson_in(httpserverresponse &res, Json::Value root);
-	bool compareAddresses(std::string InitiatorAddr, std::string myaddr, std::string &errorcode);
+	bool compareAddressesEqual(std::string InitiatorAddr, std::string myaddr, std::string &errorcode);
 };
 
 #endif // CLIENTSERVER_HPP

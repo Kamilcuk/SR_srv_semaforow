@@ -92,10 +92,21 @@ void Server::HeartbeatScan()
 	DEBUGMSG("initialiting heartbeat detection\n");
 	std::vector<std::string> v = getAllOwners();
 	for(auto const &o : v) {
+		if ( !ohbcount.count(o) ) {
+			ohbcount.insert(std::make_pair(o, 0));
+		}
+
 		std::string errorstr;
 		if ( !Server::CheckClient(o, errorstr) ) {
-			DEBUGMSG("No connection with client: %s errostr=%s \n", o.c_str(), errorstr.c_str());
-			DisconnectClient(o);
+			++ohbcount[o];
+			if ( ohbcount[o] >= 3 ) {
+				DEBUGMSG("No connection with client: %s for %d time. DISCONNECTING. errostr=%s \n",
+						 o.c_str(), ohbcount[o], errorstr.c_str());
+				DisconnectClient(o);
+			} else {
+				DEBUGMSG("No connection with client: %s for %d time. errostr=%s \n",
+						 o.c_str(), ohbcount[o], errorstr.c_str());
+			}
 		}
 	}
 }
@@ -223,23 +234,22 @@ void Server::operatorO_parseJson_in(httpserverresponse &res, Json::Value root)
 		Json::Value ret;
 		ret["method"] = root["Locks.Dump"];
 		ret["id"] = root["id"];
-		unsigned int i=0;
+		ret["result"]["Semaphores"] = Json::arrayValue;
 		for(auto&& isems : getSemsData()) {
+			Json::Value sem = Json::Value();
 			SemaphoreData sd = isems.second;
 
-			ret["result"]["Semaphores"][i]["CurrentVal"] = sd.cur;
-			ret["result"]["Semaphores"][i]["MaxVal"] = sd.max;
-			ret["result"]["Semaphores"][i]["MinVal"] = sd.min;
-			ret["result"]["Semaphores"][i]["UUID"] = isems.first;
-			ret["result"]["Semaphores"][i]["owners_size"] = sd.owners.size();
-			if ( sd.owners.size() > 0 ) {
-				for(unsigned int j=0; j<sd.owners.size(); ++j) {
-					root["result"]["Semaphores"][i]["owners"][j] = sd.owners[j];
-				}
-			} else {
-				root["result"]["Semaphores"][i]["owners"][0] = Json::Value();
+			sem["CurrentVal"] = sd.cur;
+			sem["MaxVal"] = sd.max;
+			sem["MinVal"] = sd.min;
+			sem["UUID"] = isems.first;
+			sem["owners_size"] = sd.owners.size();
+			sem["owners"] = Json::arrayValue;
+			for(auto&& owner : sd.owners ) {
+				sem["owners"].append( owner );
 			}
-			i++;
+
+			ret["result"]["Semaphores"].append( sem );
 		}
 		return fillrespOKJson(res, ret);
 	}else

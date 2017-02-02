@@ -9,7 +9,7 @@ ClientServer::ClientServer(Client *client) :
 
 }
 
-bool ClientServer::compareAddresses(std::string InitiatorAddr, std::string myaddr, std::string &errorcode)
+bool ClientServer::compareAddressesEqual(std::string InitiatorAddr, std::string myaddr, std::string &errorcode)
 {
 	std::vector<std::string> words;
 	words = split(InitiatorAddr, ':');
@@ -38,11 +38,18 @@ bool ClientServer::compareAddresses(std::string InitiatorAddr, std::string myadd
 		return false;
 	}
 
-	if ( ownerip.compare("0.0.0.0") || ip.compare("0.0.0.0") || !ownerip.compare(ip) ) {
+	if ( ownerip.compare("0.0.0.0") ) {
+		errorcode=" ownerip.compare(\"0.0.0.0\") ";
+		return false;
+	}
+	if ( ip.compare("0.0.0.0") ) {
+		errorcode=" ip.compare(\"0.0.0.0\") ";
+		return false;
+	}
+	if ( !ownerip.compare(ip) ) {
 		errorcode=" !ownerip.compare(ip) ";
 		return false;
 	}
-
 	if ( port != ownerport ) {
 		errorcode=" port != ownerport ";
 		return false;
@@ -69,7 +76,7 @@ void ClientServer::operatorO_parseJson_in(httpserverresponse &res, Json::Value r
 //		}
 
 		std::string errorcode;
-		if ( !compareAddresses(InitiatorAddr, _client->getOwner(), errorcode) ) {
+		if ( compareAddressesEqual(InitiatorAddr, _client->getOwner(), errorcode) ) {
 			// Otherwise, if client is not currently waiting for any resources, client MUST do nothing.
 			// Otherwise, if client IS currently waiting for any resources, client MUST send a Locks.
 			_client->SendLocksToAllServersWhenClientProbe(InitiatorAddr);

@@ -101,17 +101,17 @@ bool process_command_line(int argc, char** argv,struct config_s &config)
 	return true;
 }
 
-Servicable *service = nullptr;
-std::thread quittingthread;
+static Servicable *service = nullptr;
+static std::thread quittingthread;
 
-void waitSecThenExit(unsigned int sec) {
+static void waitSecThenExit(unsigned int sec) {
 	sleep(sec);
 	std::cerr << "Forcing quit";
 	exit(1);
 }
 
-void signalfunc(int signum) {
-	std::cerr << "Rreceived signal: " << signum;
+static void signalfunc(int signum) {
+	std::cerr << "Received signal: " << signum;
 	std::cerr << " starting quitting thread ";
 	quittingthread = std::thread(waitSecThenExit, 5);
 	if ( service  ) {
@@ -135,10 +135,13 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	std::cout << "Params: " << std::string(config.is_server?"server":"client")
-			<<" listenip: "<< config.listenip
-		   <<" listenport: "<<config.listenport
+		  <<" listenip: "<<config.listenip
+		  <<" listenport: "<<config.listenport
 		  <<" config.threadsnum: "<<config.threadsnum
-		  <<" serverurl: "<<config.serverurl<<" \n";
+		  <<" serverurl: "<<config.serverurl << std::endl;
+	std::cout << "LISTENING ON THIS: listenip:listenport "
+			  << ( config.listenip.compare("0.0.0.0") ? "127.0.0.1" : config.listenip )
+			  <<":"<<config.listenport << std::endl;
 
 	signal(SIGINT, signalfunc);
 	try {

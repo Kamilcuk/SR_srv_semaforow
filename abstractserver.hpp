@@ -26,6 +26,9 @@ struct AbstractServer
 	virtual void operatorO_parseJson_in(httpserverresponse &res, Json::Value root) = 0;
 
 	std::map<std::string, std::string> headersToMap(auto headers);
+
+public:
+	void in_operator(const httpserverrequest &req, httpserverresponse &res);
 };
 
 #endif // ABSTRACTSERVER_HPP

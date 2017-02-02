@@ -62,6 +62,8 @@ public:
 	std::string getOwner() const;
 	bool getDeadlock() const;
 	void setDeadlock(bool value);
+	std::string Send_LocksProbe_all(std::string ReturnAddr, std::string InitiatorAddr, std::string uuid);
+	void SafeExit();
 };
 
 #endif // CLIENT_HPP
