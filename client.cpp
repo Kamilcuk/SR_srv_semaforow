@@ -274,9 +274,9 @@ void Client::SendLocksToAllServersWhenClientProbe(std::string InitiatorAddr)
 void Client::SafeExit() {
 	std::cerr << "EXIT Safe exiting - incrementing all decremented semaphores" << std::endl;
 	for(auto &s : sems) {
-		std::cout << " s.second.value=" << s.second.value << std::endl;
+		std::cout << " semaphore.uuid=" << s.second.uuid << " semaphore.value=" << s.second.value << std::endl;
 		for(int i=s.second.value; i<0 ; ++i) {
-			std::cout << "i=" << i << std::endl;
+			std::cout << "   ^---> i=" << i << std::endl;
 			Send_LocksIncrementSemaphore(s.second.uuid);
 		}
 	}

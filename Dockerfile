@@ -9,7 +9,7 @@ RUN pacman -Suy --needed --noconfirm --noprogressbar sudo base-devel git boost c
 	chown nobody:nobody /tmp/cpp-netlib && \
 	sudo -u nobody makepkg && pacman -U --noconfirm cpp-netlib-*.pkg.tar.xz
 CMD /usr/bin/SR_srv_semaforow
-RUN git clone https://github.com/Kamilcuk/SR_srv_semaforow /SR_srv_semaforow && cd /SR_srv_semaforow && \
+RUN git clone https://github.com/Kamilcuk/SR_srv_semaforow /SR_srv_semaforow && cd /SR_srv_semaforow &&  \
 	qmake && make -j4 && \
 	ln -s /SR_srv_semaforow/SR_srv_semaforow /usr/bin/SR_srv_semaforow
 

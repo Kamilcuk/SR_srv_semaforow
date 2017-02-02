@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
-kamilclientexe="${kamilclientexe:-$(dirname $(readlink -f $0))/SR_srv_semaforow}"
+kamilclientexe="${kamilclientexe:-./SR_srv_semaforow}"
+readRECVtimeout=2;
 
 ############################ functions ###########################
 send() {
@@ -112,7 +113,7 @@ run_child() {
     local fw=$tmpdir/fw$writedesc
     local fr=$tmpdir/fr$readdesc
     mkfifo $fr $fw
-    ( ( set -x; "$@" <$fw >$fr ) 2>&1 | sed "s;^;STDERR_${_run_child_iterator}: $* -- ;" 1>&2 ) &
+    ( ( set -x; "$@" <$fw >$fr ) 2>&1 | sed "s;^;STDERR_${_run_child_iterator}: ;" 1>&2 ) &
     _run_child_iterator=$((_run_child_iterator+1))
 	new_child=$!
     eval "exec ${writedesc}>$fw"
@@ -137,7 +138,7 @@ ctrl_c() {
 }
 readRECV() {
 	local identifier="${1:- }"
-        while read -t 1 line; do
+        while read -t "${readRECVtimeout}" line; do
                 [ "$READRECVDEBUG" = true ] && echo "STDOUT_${identifier}: $line" >&2
                 if [[ $line =~ ^Recv: ]]; then
                         echo $line | sed 's/Recv:[ ]*//'
@@ -146,11 +147,12 @@ readRECV() {
         done
 }
 sendrecv() {
+	local text="${1:-}"
 	local descw=${2:-3}
 	local descr=${3:-4}
 	local number=$(( ( ${descw} - 11 ) / 2 ))
-    echo "v_${number}-> $1 -- _${number}($2,$3)"
-    echo "$1" >&${descw}
+    echo "v_${number}-> $text -- _${number}($2,$3)"
+    [ -n "$text" ] && echo "$text" >&${descw}
     recv=$(readRECV $number <&${descr})
     echo "^_${number}-> $recv"
     echo;
@@ -158,8 +160,13 @@ sendrecv() {
 }
 
 check_port_is_open() {
-	port=$1
+	local port=$1
 	netstat -lnt | awk '$6 == "LISTEN" && $4 ~ ".:'$port'"'
+}
+
+sendrecvchild() {
+	local number=${1}; shift;
+	sendrecv "$@" $((${number}*2+11)) $((${number}*2+12))
 }
 
 client_mode1() {
@@ -176,6 +183,7 @@ client_mode1() {
 	child+=" ${new_child} "
 	export child
 	export tmpdir
+	sleep 4
 
 	sendrecvchild 1 'Maintenance.Hello Bash_Test_Script'
 	sendrecvchild 1 'Locks.CreateSemaphore 2 0 2'
@@ -190,11 +198,6 @@ client_mode1() {
 	sendrecvchild 1 "quit"
 	echo
 	ctrl_c
-}
-
-sendrecvchild() {
-	local number=${1}; shift;
-	sendrecv "$@" $((${number}*2+11)) $((${number}*2+12))
 }
 
 client_mode2() {
@@ -221,13 +224,20 @@ client_mode2() {
 	export child
 	export tmpdir
 
-	sleep 2;
+	echo "Testing clients"
+	for i in 1 2 3; do
+		sendrecvchild ${i} ""
+	done
+	for i in 1 2 3; do
+		sendrecvchild ${i} 'Maintenance.Hello Bash_Test_Script'
+	done
+	for i in 1 2 3; do
+		sendrecvchild ${i} ""
+	done
 	if ! check_port_is_open $PORT1 || ! check_port_is_open $PORT2 || ! check_port_is_open $PORT3; then
 		echo "BUG EEOR"
 		exit 1
 	fi
-
-	sendrecvchild 1 'Maintenance.Hello Bash_Test_Script'
 	
 	# lets create two sems
     sendrecvchild 1 'Locks.CreateSemaphore 1 0 1'
