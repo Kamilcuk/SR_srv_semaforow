@@ -20,3 +20,9 @@ docker run -it --rm --name kamilclient  --net=host kamilcuk/sr_srv_semaforow /us
 
 #client kosiak
 docker run -it --rm --name kosiakclient --net=host kamilcuk/sr_srv_semaforow:kosiak_client
+
+
+# test Deadlock detection on kamil's clients
+## run server on a port in another console, and then run:
+docker run -it --rm --name kamilclient   --net=host kamilcuk/sr_srv_semaforow /SR_srv_semaforow/test_server.sh client_mode2 <server_addr>:<server_port>
+

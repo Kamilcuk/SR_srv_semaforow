@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-kamilclientexe="${kamilclientexe:-./SR_srv_semaforow}"
+kamilclientexe="${kamilclientexe:-$(dirname $(readlink -f $0))/SR_srv_semaforow}"
 
 ############################ functions ###########################
 send() {
@@ -112,7 +112,7 @@ run_child() {
     local fw=$tmpdir/fw$writedesc
     local fr=$tmpdir/fr$readdesc
     mkfifo $fr $fw
-    ( ( ( set -x; "$@" ) <$fw >$fr ) 2>&1 | sed "s;^;STDERR_${_run_child_iterator}: $* -- ;" 1>&2 ) &
+    ( ( set -x; "$@" <$fw >$fr ) 2>&1 | sed "s;^;STDERR_${_run_child_iterator}: $* -- ;" 1>&2 ) &
     _run_child_iterator=$((_run_child_iterator+1))
 	new_child=$!
     eval "exec ${writedesc}>$fw"
@@ -121,9 +121,9 @@ run_child() {
 }
 
 kill_all_childs() {
-	kill -- -$(ps -o pgid= $PID | grep -o '[0-9]*')
+	kill -- -$(ps -o pgid= $$ | grep -o '[0-9]*')
 	sleep 0.5
-	kill -9 -$(ps -o pgid= $PID | grep -o '[0-9]*')
+	kill -9 -$(ps -o pgid= $$ | grep -o '[0-9]*')
 }
 
 ctrl_c() { 
@@ -146,11 +146,14 @@ readRECV() {
         done
 }
 sendrecv() {
-	descw=${2:-3}
-	descr=${3:-4}
+	local descw=${2:-3}
+	local descr=${3:-4}
+	local number=$(( ( ${descw} - 11 ) / 2 ))
+    echo "v_${number}-> $1 -- _${number}($2,$3)"
     echo "$1" >&${descw}
-    recv=$(readRECV $(( ( ${descw} - 11 ) / 2 )) <&${descr})
-    echo -e "v-> $1 -- ($2,$3) \n^-> $recv\n"
+    recv=$(readRECV $number <&${descr})
+    echo "^_${number}-> $recv"
+    echo;
     export recv
 }
 
@@ -161,31 +164,30 @@ check_port_is_open() {
 
 client_mode1() {
 	SERVERURL=${1:-127.0.0.1:7890}
-	PORT1=${2:-$((7890+${RANDOM}%100))}
+	PORT1=${2:-$((10000+${RANDOM}%1000))}
 	PORT2=${3:-7900}
-
-	tmpdir=$(mktemp -d)
-	fw=$tmpdir/fw
-	fr=$tmpdir/fr
-	mkfifo $fr $fw
-	( set -x; ${kamilclientexe} --type client --listenport $PORT1 --listenip 127.0.0.1 --serverurl $SERVERURL ) <$fw >$fr &
-	child=$!
-	exec 3>$fw
-	exec 4<$fr
-	trap 'ctrl_c' SIGINT
-
+    tmpdir=$(mktemp -d)
+	child=""
 	recv=""
+    trap 'ctrl_c' SIGINT
+    trap 'ctrl_c' EXIT
 
-	sendrecv 'Maintenance.Hello Bash_Test_Script'
-	sendrecv 'Locks.CreateSemaphore 2 0 2'
+	run_child $tmpdir 1 ${kamilclientexe} --type client --listenport $PORT1 --listenip 127.0.0.1 --serverurl $SERVERURL
+	child+=" ${new_child} "
+	export child
+	export tmpdir
+
+	sendrecvchild 1 'Maintenance.Hello Bash_Test_Script'
+	sendrecvchild 1 'Locks.CreateSemaphore 2 0 2'
 	sem1=$recv
-	sendrecv "Locks.Dump"
-	sendrecv "Locks.DecrementSemaphore $sem1"
-	sendrecv "Locks.Probe 127.0.0.1:$PORT1 $sem1"
+	sendrecvchild 1 "Locks.Dump"
+	sendrecvchild 1 "Locks.DecrementSemaphore $sem1"
+	sendrecvchild 1 "Locks.Probe 127.0.0.1:$PORT1 127.0.0.1:$PORT1 $sem1"
 	sleep 2
-	sendrecv "Locks.Dump"
-	sendrecv "Locks.DeleteSemaphore $sem1"
-
+	sendrecvchild 1 "Locks.Dump"
+	sendrecvchild 1 "Locks.DeleteSemaphore $sem1"
+	sleep 2
+	sendrecvchild 1 "quit"
 	echo
 	ctrl_c
 }
@@ -199,11 +201,11 @@ client_mode2() {
 	READRECVDEBUG=true
 	export READRECVDEBUG
 	# some deadlock
-        SERVERURL=${1:-127.0.0.1:7890}
-        PORT1=${2:-$((7890+${RANDOM}%100))}
-        PORT2=${3:-$((7890+${RANDOM}%100))}
-	PORT3=${3:-$((7890+${RANDOM}%100))}
-        tmpdir=$(mktemp -d)
+    SERVERURL=${1:-127.0.0.1:7890}
+	PORT1=${2:-$((10000+${RANDOM}%1000))}
+    PORT2=${3:-$((10000+${RANDOM}%1000))}
+	PORT3=${3:-$((10000+${RANDOM}%1000))}
+    tmpdir=$(mktemp -d)
 	child=""
 	recv=""
     trap 'ctrl_c' SIGINT

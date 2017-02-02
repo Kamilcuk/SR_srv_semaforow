@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
 		  <<" config.threadsnum: "<<config.threadsnum
 		  <<" serverurl: "<<config.serverurl << std::endl;
 	std::cout << "LISTENING ON THIS: listenip:listenport "
-			  << ( config.listenip.compare("0.0.0.0") ? "127.0.0.1" : config.listenip )
+			  << ( config.listenip.compare("0.0.0.0") ? config.listenip : "127.0.0.1" )
 			  <<":"<<config.listenport << std::endl;
 
 	signal(SIGINT, signalfunc);
